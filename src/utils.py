@@ -1,4 +1,6 @@
+import json
 import os
+import pandas as pd
 import shutil
 import xmltodict
 from zipfile import ZipFile
@@ -27,12 +29,28 @@ def parse_annotation(path):
         file = file[0]
 
     with open(os.path.join(path_temp, file), 'r') as xml_file:
-        content = dict(xmltodict.parse(xml_file.read()))
+        content = xmltodict.parse(xml_file.read())
+        # dirty but working - convert to dict, deep: all ordereddicts
+        content = json.loads(json.dumps(content))
 
-    # TODO: implement parsing of JSON content
+    # TODO: check if files with different structures might occur - multiple tracks?
+    # e.g. multiple faces?
+    track = content['annotations']['track']['box']
+
+    frames = []
+
+    for frame in track:
+        attributes = {list(a.values())[0]: list(a.values())[1]
+                      for a in frame['attribute']}
+        attributes['frame'] = frame['@frame']
+        frames.append(attributes)
+
+    annotation = pd.DataFrame(frames)
+    annotation['annotator'] = annotator
+    annotation['video'] = video
 
     shutil.rmtree(path_temp, ignore_errors=True)
-    return None
+    return annotation
 
 
 def get_annotations():
@@ -41,11 +59,14 @@ def get_annotations():
     # TODO: this is only for one annotator - expand
     path_lukas = os.path.join(PATH, 'LHu')
     files_lukas = [f for f in os.listdir(path_lukas) if f.endswith('.zip')]
+
     for file in files_lukas:
         path_annotation = os.path.join(path_lukas, file)
         annotation = parse_annotation(path_annotation)
-        annotations.extend(annotation)
-    return annotations  # (bspw als dict, list, dataframe)
+        annotations.append(annotation)
+
+    all_annotations = pd.concat(annotations, axis=0, ignore_index=True)
+    return all_annotations
 
 
 if __name__ == "__main__":
