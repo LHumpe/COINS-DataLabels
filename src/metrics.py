@@ -1,8 +1,6 @@
 import argparse
 import utils
 
-utils.parse_annotations
-
 parser = argparse.ArgumentParser(
     description='Calculate IRR and equality of representation')
 parser.add_argument('metric', action='store', choices=['irr', 'representation'], required=True,
