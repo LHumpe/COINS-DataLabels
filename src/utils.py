@@ -6,6 +6,7 @@ import xmltodict
 from zipfile import ZipFile
 
 PATH = 'annotations/'
+ANNOTATORS = ['LHu', 'janik', 'simon']
 
 
 def parse_annotation(path):
@@ -56,14 +57,15 @@ def parse_annotation(path):
 def get_annotations():
     annotations = []
 
-    # TODO: this is only for one annotator - expand
-    path_lukas = os.path.join(PATH, 'LHu')
-    files_lukas = [f for f in os.listdir(path_lukas) if f.endswith('.zip')]
+    for annotator in ANNOTATORS:
+        path = os.path.join(PATH, annotator)
 
-    for file in files_lukas:
-        path_annotation = os.path.join(path_lukas, file)
-        annotation = parse_annotation(path_annotation)
-        annotations.append(annotation)
+        files = [f for f in os.listdir(path) if f.endswith('.zip')]
+
+        for file in files:
+            path_annotation = os.path.join(path, file)
+            annotation = parse_annotation(path_annotation)
+            annotations.append(annotation)
 
     all_annotations = pd.concat(annotations, axis=0, ignore_index=True)
     return all_annotations
