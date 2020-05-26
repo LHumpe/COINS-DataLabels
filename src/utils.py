@@ -2,11 +2,25 @@ import json
 import os
 import pandas as pd
 import shutil
+from tqdm import tqdm
 import xmltodict
 from zipfile import ZipFile
 
-PATH = 'annotations/'
+PATH_ANNOTATIONS = 'annotations/'
+PATH_BBOX = 'bboxes/'
 ANNOTATORS = ['LHu', 'janik', 'simon']
+
+
+def parse_track(track):
+    frames = []
+
+    for frame in track['box']:
+        attributes = {list(a.values())[0]: list(a.values())[1]
+                      for a in frame['attribute']}
+        attributes['frame'] = frame['@frame']
+        frames.append(attributes)
+
+    return pd.DataFrame(frames)
 
 
 def parse_annotation(path):
@@ -36,17 +50,16 @@ def parse_annotation(path):
 
     # TODO: check if files with different structures might occur - multiple tracks?
     # e.g. multiple faces?
-    track = content['annotations']['track']['box']
+    tracks = content['annotations']['track']
+    if type(tracks) == list:
+        # multiple faces/bboxes
+        annotations = []
+        for track in tracks:
+            annotations.append(parse_track(track))
+        annotation = pd.concat(annotations, axis=0, ignore_index=True)
+    else:
+        annotation = parse_track(tracks)
 
-    frames = []
-
-    for frame in track:
-        attributes = {list(a.values())[0]: list(a.values())[1]
-                      for a in frame['attribute']}
-        attributes['frame'] = frame['@frame']
-        frames.append(attributes)
-
-    annotation = pd.DataFrame(frames)
     annotation['annotator'] = annotator
     annotation['video'] = video
 
@@ -54,11 +67,25 @@ def parse_annotation(path):
     return annotation
 
 
+def get_bboxes():
+    bboxes = []
+
+    files = [f for f in os.listdir(PATH_BBOX) if f.endswith('.zip')]
+
+    for file in tqdm(files):
+        path_annotation = os.path.join(PATH_BBOX, file)
+        annotation = parse_annotation(path_annotation)
+        bboxes.append(annotation)
+
+    all_bboxes = pd.concat(bboxes, axis=0, ignore_index=True)
+    return all_bboxes
+
+
 def get_annotations():
     annotations = []
 
     for annotator in ANNOTATORS:
-        path = os.path.join(PATH, annotator)
+        path = os.path.join(PATH_ANNOTATIONS, annotator)
 
         files = [f for f in os.listdir(path) if f.endswith('.zip')]
 
@@ -72,4 +99,4 @@ def get_annotations():
 
 
 if __name__ == "__main__":
-    get_annotations()
+    get_bboxes()
