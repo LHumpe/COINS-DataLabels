@@ -8,7 +8,7 @@ from zipfile import ZipFile
 
 PATH_ANNOTATIONS = 'annotations/'
 PATH_BBOX = 'bboxes/'
-ANNOTATORS = ['LHu', 'janik', 'simon']
+ANNOTATORS = ['LHu', 'JMu', 'SFM']
 
 
 def parse_track(track):

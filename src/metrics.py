@@ -8,6 +8,7 @@ parser.add_argument('metric', action='store', choices=['irr', 'representation'],
 
 
 def calculate_irr():
+    print('not implemented jet')
     # TODO: implement
     pass
 
