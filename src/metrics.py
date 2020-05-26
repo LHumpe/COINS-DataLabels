@@ -16,10 +16,10 @@ def calculate_representation():
     annotations = utils.get_bboxes()
     print('Currently we have',
           annotations.shape[0], 'frames.', 3000000-annotations.shape[0], 'to go - yippie!')
-    print('\nEthnicity representation:\n' +
-          annotations['ETHNICITY'].value_counts(normalize=True) * 100)
-    print('\nGender representation:\n' +
-          annotations['GENDER'].value_counts(normalize=True) * 100)
+    print('\nEthnicity representation:\n')
+    print(annotations['ETHNICITY'].value_counts(normalize=True) * 100)
+    print('\nGender representation:\n')
+    print(annotations['GENDER'].value_counts(normalize=True) * 100)
 
 
 if __name__ == "__main__":
