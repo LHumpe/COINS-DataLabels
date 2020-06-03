@@ -8,22 +8,33 @@ from zipfile import ZipFile
 
 PATH_ANNOTATIONS = 'annotations/'
 PATH_BBOX = 'bboxes/'
-ANNOTATORS = ['LHu', 'JMu', 'SFM']
+ANNOTATORS = ['LHu', 'JMu', 'SFr']
 
 
-def parse_track(track):
+def parse_track(track, flow=False):
     frames = []
 
     for frame in track['box']:
-        attributes = {list(a.values())[0]: list(a.values())[1]
-                      for a in frame['attribute']}
+
+        if not flow:
+            attributes = {list(a.values())[0]: list(a.values())[1]
+                          for a in frame['attribute']}
+            attributes['xtl'] = frame['@xtl']
+            attributes['ytl'] = frame['@ytl']
+            attributes['xbr'] = frame['@xbr']
+            attributes['ybr'] = frame['@ybr']
+            attributes['occluded'] = frame['@occluded']
+            # flow is joined in a later parsing step for each annotator
+            del attributes['FLOW']
+        else:
+            attributes = {'flow': frame['attribute']}
         attributes['frame'] = frame['@frame']
         frames.append(attributes)
 
     return pd.DataFrame(frames)
 
 
-def parse_annotation(path):
+def parse_annotation(path, flow=False):
     path_temp = os.path.abspath(os.path.join(path,  '..', 'temp/'))
 
     if not os.path.isdir(path_temp):
@@ -48,17 +59,16 @@ def parse_annotation(path):
         # dirty but working - convert to dict, deep: all ordereddicts
         content = json.loads(json.dumps(content))
 
-    # TODO: check if files with different structures might occur - multiple tracks?
     # e.g. multiple faces?
     tracks = content['annotations']['track']
     if type(tracks) == list:
         # multiple faces/bboxes
         annotations = []
         for track in tracks:
-            annotations.append(parse_track(track))
+            annotations.append(parse_track(track, flow=flow))
         annotation = pd.concat(annotations, axis=0, ignore_index=True)
     else:
-        annotation = parse_track(tracks)
+        annotation = parse_track(tracks, flow=flow)
 
     annotation['annotator'] = annotator
     annotation['video'] = video
@@ -91,12 +101,19 @@ def get_annotations():
 
         for file in files:
             path_annotation = os.path.join(path, file)
-            annotation = parse_annotation(path_annotation)
+            annotation = parse_annotation(path_annotation, flow=True)
             annotations.append(annotation)
 
     all_annotations = pd.concat(annotations, axis=0, ignore_index=True)
+    all_annotations.pivot_table(values='flow', index=[
+                                'video', 'frame'], columns='annotator', aggfunc="sum").reset_index()
     return all_annotations
 
 
 if __name__ == "__main__":
-    get_bboxes()
+    bboxes = get_bboxes()
+    annotations = get_annotations()
+    frames = bboxes.merge(annotations, how='left', on=['video', 'frame'])
+    if not os.path.isdir('data'):
+        os.mkdir('data')
+    frames.to_csv('data/frames.csv', index=False)
