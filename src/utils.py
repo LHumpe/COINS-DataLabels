@@ -2,28 +2,41 @@ import json
 import os
 import pandas as pd
 import shutil
+import sys
 from tqdm import tqdm
 import xmltodict
 from zipfile import ZipFile
 
 PATH_ANNOTATIONS = 'annotations/'
 PATH_BBOX = 'bboxes/'
-ANNOTATORS = ['LHu', 'janik', 'simon']
+ANNOTATORS = ['LHu', 'JMu', 'SFr']
 
 
-def parse_track(track):
+def parse_track(track, flow=False):
     frames = []
 
     for frame in track['box']:
-        attributes = {list(a.values())[0]: list(a.values())[1]
-                      for a in frame['attribute']}
+
+        if not flow:
+            attributes = {list(a.values())[0]: list(a.values())[1]
+                          for a in frame['attribute']}
+            attributes['xtl'] = frame['@xtl']
+            attributes['ytl'] = frame['@ytl']
+            attributes['xbr'] = frame['@xbr']
+            attributes['ybr'] = frame['@ybr']
+            attributes['occluded'] = frame['@occluded']
+            # flow is joined in a later parsing step for each annotator
+            del attributes['FLOW']
+        else:
+            att = dict((item['@name'], item) for item in frame['attribute'])
+            attributes = {'FLOW': att['FLOW']['#text']}
         attributes['frame'] = frame['@frame']
         frames.append(attributes)
 
     return pd.DataFrame(frames)
 
 
-def parse_annotation(path):
+def parse_annotation(path, flow=False):
     path_temp = os.path.abspath(os.path.join(path,  '..', 'temp/'))
 
     if not os.path.isdir(path_temp):
@@ -48,19 +61,21 @@ def parse_annotation(path):
         # dirty but working - convert to dict, deep: all ordereddicts
         content = json.loads(json.dumps(content))
 
-    # TODO: check if files with different structures might occur - multiple tracks?
     # e.g. multiple faces?
     tracks = content['annotations']['track']
     if type(tracks) == list:
         # multiple faces/bboxes
         annotations = []
         for track in tracks:
-            annotations.append(parse_track(track))
+            annotations.append(parse_track(track, flow=flow))
         annotation = pd.concat(annotations, axis=0, ignore_index=True)
     else:
-        annotation = parse_track(tracks)
+        annotation = parse_track(tracks, flow=flow)
 
-    annotation['annotator'] = annotator
+    if not flow:
+        annotation['annotator_boxes'] = annotator
+    else:
+        annotation['annotator'] = annotator
     annotation['video'] = video
 
     shutil.rmtree(path_temp, ignore_errors=True)
@@ -78,6 +93,10 @@ def get_bboxes():
         bboxes.append(annotation)
 
     all_bboxes = pd.concat(bboxes, axis=0, ignore_index=True)
+    all_bboxes['video'] = pd.to_numeric(
+        all_bboxes['video'], downcast='integer')
+    all_bboxes['frame'] = pd.to_numeric(
+        all_bboxes['frame'], downcast='integer')
     return all_bboxes
 
 
@@ -91,12 +110,51 @@ def get_annotations():
 
         for file in files:
             path_annotation = os.path.join(path, file)
-            annotation = parse_annotation(path_annotation)
+            annotation = parse_annotation(path_annotation, flow=True)
             annotations.append(annotation)
 
     all_annotations = pd.concat(annotations, axis=0, ignore_index=True)
+    all_annotations['video'] = pd.to_numeric(
+        all_annotations['video'], downcast='integer')
+    all_annotations['frame'] = pd.to_numeric(
+        all_annotations['frame'], downcast='integer')
+    all_annotations = all_annotations.pivot_table(values='FLOW', index=[
+        'video', 'frame'], columns='annotator', aggfunc="sum").reset_index()
+    all_annotations.rename(
+        {'SFr': 'FLOW_SFr', 'LHu': 'FLOW_LHu', 'JMu': 'FLOW_JMu'}, axis=1, inplace=True)
     return all_annotations
 
 
+def calc_irr(df):
+    df['irr_JMu_LHu'] = df['FLOW_JMu'] == df['FLOW_LHu']
+    df['irr_LHu_SFr'] = df['FLOW_LHu'] == df['FLOW_SFr']
+    df['irr_SFr_JMu'] = df['FLOW_SFr'] == df['FLOW_JMu']
+
+    df['irr'] = sum(
+        [df['irr_JMu_LHu'], df['irr_LHu_SFr'], df['irr_SFr_JMu']]) / 3
+
+    return df
+
+
+def process_frames():
+    bboxes = get_bboxes()
+    annotations = get_annotations()
+    frames = bboxes.merge(annotations, how='left', on=['video', 'frame'])
+    frames = calc_irr(frames)
+    if not os.path.isdir('data'):
+        os.mkdir('data')
+    frames.to_csv('data/frames.csv', index=False)
+
+
+def get_frames():
+    try:
+        df = pd.read_csv('data/frames.csv')
+    except FileNotFoundError:
+        print('No such file: data/frames.csv - run utils.proces_frames() first!')
+        sys.exit(1)
+
+    return df
+
+
 if __name__ == "__main__":
-    get_bboxes()
+    process_frames()
