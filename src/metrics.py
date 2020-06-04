@@ -13,11 +13,11 @@ def calculate_irr(video=None):
     annotations = utils.get_frames()
     if video is not None:
         print('Overall IRR for video', video, 'is:',
-              annotations[annotations['video'] == video]['irr'].mean())
+              annotations[annotations['video'] == video]['majority'].mean() / 3)
 
         # TODO: get more stats, like number of frames that have no, 2/3, full agreement
     else:
-        print('Overall IRR is:', annotations['irr'].mean())
+        print('Overall IRR is:', annotations['majority'].mean() / 3)
 
 
 def calculate_representation():
