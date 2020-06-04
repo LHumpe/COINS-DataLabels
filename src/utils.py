@@ -126,6 +126,11 @@ def get_annotations():
         {'SFr': 'FLOW_SFr', 'LHu': 'FLOW_LHu', 'JMu': 'FLOW_JMu'}, axis=1, inplace=True)
     return all_annotations
 
+def get_flow_majority(row):
+    if None in [row['FLOW_JMu'], row['FLOW_LHu'], row['FLOW_SFr']]:
+        return None
+    else:
+        return 1 if (row['FLOW_JMu'] + row['FLOW_LHu'] + row['FLOW_SFr']) >= 2 else 0
 
 def calc_irr(df):
     df['FLOW_majority'] = df.apply(lambda x: 1 if (x['FLOW_JMu'] + x['FLOW_LHu'] + x['FLOW_SFr']) >= 2 else 0, axis=1)
