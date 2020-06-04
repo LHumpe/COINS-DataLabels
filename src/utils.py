@@ -128,7 +128,7 @@ def get_annotations():
 
 
 def calc_irr(df):
-    df['FLOW_majority'] = 1 if (df['FLOW_JMu'] + df['FLOW_LHu'] + df['FLOW_SFr']) >= 2 else 0
+    df['FLOW_majority'] = df.apply(lambda x: 1 if (x['FLOW_JMu'] + x['FLOW_LHu'] + x['FLOW_SFr']) >= 2 else 0, axis=1)
     
     df['irr_JMu_LHu'] = df['FLOW_JMu'] == df['FLOW_LHu']
     df['irr_LHu_SFr'] = df['FLOW_LHu'] == df['FLOW_SFr']
