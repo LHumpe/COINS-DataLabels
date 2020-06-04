@@ -118,6 +118,8 @@ def get_annotations():
         all_annotations['video'], downcast='integer')
     all_annotations['frame'] = pd.to_numeric(
         all_annotations['frame'], downcast='integer')
+    all_annotations['FLOW'] = pd.to_numeric(
+        all_annotations['FLOW'], downcast='integer')
     all_annotations = all_annotations.pivot_table(values='FLOW', index=[
         'video', 'frame'], columns='annotator', aggfunc="sum").reset_index()
     all_annotations.rename(
@@ -126,7 +128,7 @@ def get_annotations():
 
 
 def calc_irr(df):
-    df['FLOW_majority'] = 1 if df['FLOW_JMu'] + df['FLOW_LHu'] + df['FLOW_SFr'] >= 2 else 0
+    df['FLOW_majority'] = 1 if (df['FLOW_JMu'] + df['FLOW_LHu'] + df['FLOW_SFr']) >= 2 else 0
     
     df['irr_JMu_LHu'] = df['FLOW_JMu'] == df['FLOW_LHu']
     df['irr_LHu_SFr'] = df['FLOW_LHu'] == df['FLOW_SFr']
