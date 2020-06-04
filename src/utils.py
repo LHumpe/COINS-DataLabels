@@ -127,7 +127,7 @@ def get_annotations():
     return all_annotations
 
 def get_flow_majority(row):
-    if None in [row['FLOW_JMu'], row['FLOW_LHu'], row['FLOW_SFr']]:
+    if row.isna().values().any():
         return None
     else:
         return 1 if (row['FLOW_JMu'] + row['FLOW_LHu'] + row['FLOW_SFr']) >= 2 else 0
