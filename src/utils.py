@@ -126,15 +126,17 @@ def get_annotations():
         {'SFr': 'FLOW_SFr', 'LHu': 'FLOW_LHu', 'JMu': 'FLOW_JMu'}, axis=1, inplace=True)
     return all_annotations
 
+
 def get_flow_majority(row):
-    if row.isna().values().any():
+    if row.isna().any():
         return None
     else:
         return 1 if (row['FLOW_JMu'] + row['FLOW_LHu'] + row['FLOW_SFr']) >= 2 else 0
 
+
 def calc_irr(df):
     df['FLOW_majority'] = df.apply(lambda x: get_flow_majority(x), axis=1)
-    
+
     df['irr_JMu_LHu'] = df['FLOW_JMu'] == df['FLOW_LHu']
     df['irr_LHu_SFr'] = df['FLOW_LHu'] == df['FLOW_SFr']
     df['irr_SFr_JMu'] = df['FLOW_SFr'] == df['FLOW_JMu']
