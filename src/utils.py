@@ -133,7 +133,7 @@ def get_flow_majority(row):
         return 1 if (row['FLOW_JMu'] + row['FLOW_LHu'] + row['FLOW_SFr']) >= 2 else 0
 
 def calc_irr(df):
-    df['FLOW_majority'] = df.apply(lambda x: 1 if (x['FLOW_JMu'] + x['FLOW_LHu'] + x['FLOW_SFr']) >= 2 else 0, axis=1)
+    df['FLOW_majority'] = df.apply(lambda x: get_flow_majority(x), axis=1)
     
     df['irr_JMu_LHu'] = df['FLOW_JMu'] == df['FLOW_LHu']
     df['irr_LHu_SFr'] = df['FLOW_LHu'] == df['FLOW_SFr']
