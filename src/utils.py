@@ -85,9 +85,11 @@ def parse_annotation(path, flow=False):
 def get_bboxes():
     bboxes = []
 
+    print('parsing bboxes...')
+
     files = [f for f in os.listdir(PATH_BBOX) if f.endswith('.zip')]
 
-    for file in tqdm(files):
+    for file in tqdm(files, desc='Files'):
         path_annotation = os.path.join(PATH_BBOX, file)
         annotation = parse_annotation(path_annotation)
         bboxes.append(annotation)
@@ -103,12 +105,14 @@ def get_bboxes():
 def get_annotations():
     annotations = []
 
-    for annotator in ANNOTATORS:
+    print('parsing annotations...')
+
+    for annotator in tqdm(ANNOTATORS, desc='Annotators:'):
         path = os.path.join(PATH_ANNOTATIONS, annotator)
 
         files = [f for f in os.listdir(path) if f.endswith('.zip')]
 
-        for file in files:
+        for file in tqdm(files, desc='Files:'):
             path_annotation = os.path.join(path, file)
             annotation = parse_annotation(path_annotation, flow=True)
             annotations.append(annotation)
@@ -134,15 +138,23 @@ def get_flow_majority(row):
         return 1 if (row['FLOW_JMu'] + row['FLOW_LHu'] + row['FLOW_SFr']) >= 2 else 0
 
 
+def get_majority(row):
+    if row.isna().any():
+        return None
+    else:
+        # majority 2 for 010 and 110, majority 3 for 000 and 111
+        return 2 if ((row['FLOW_JMu'] + row['FLOW_LHu'] + row['FLOW_SFr']) == 1) or ((row['FLOW_JMu'] + row['FLOW_LHu'] + row['FLOW_SFr']) == 2) else 3
+
+
 def calc_irr(df):
+    # TODO: something faster than an two apply's?
+    print('processing FLOW majority...')
+
     df['FLOW_majority'] = df.apply(lambda x: get_flow_majority(x), axis=1)
 
-    df['irr_JMu_LHu'] = df['FLOW_JMu'] == df['FLOW_LHu']
-    df['irr_LHu_SFr'] = df['FLOW_LHu'] == df['FLOW_SFr']
-    df['irr_SFr_JMu'] = df['FLOW_SFr'] == df['FLOW_JMu']
+    print('processing majority...')
 
-    df['majority'] = sum(
-        [df['irr_JMu_LHu'], df['irr_LHu_SFr'], df['irr_SFr_JMu']])
+    df['majority'] = df.apply(lambda x: get_majority(x), axis=1)
 
     return df
 
