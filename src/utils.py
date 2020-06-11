@@ -1,4 +1,5 @@
 import json
+import numpy as np
 import os
 import pandas as pd
 import shutil
@@ -131,30 +132,20 @@ def get_annotations():
     return all_annotations
 
 
-def get_flow_majority(row):
-    if row.isna().any():
-        return None
-    else:
-        return 1 if (row['FLOW_JMu'] + row['FLOW_LHu'] + row['FLOW_SFr']) >= 2 else 0
-
-
-def get_majority(row):
-    if row.isna().any():
-        return None
-    else:
-        # majority 2 for 010 and 110, majority 3 for 000 and 111
-        return 2 if ((row['FLOW_JMu'] + row['FLOW_LHu'] + row['FLOW_SFr']) == 1) or ((row['FLOW_JMu'] + row['FLOW_LHu'] + row['FLOW_SFr']) == 2) else 3
-
-
 def calc_irr(df):
-    # TODO: something faster than an two apply's?
     print('processing FLOW majority...')
 
-    df['FLOW_majority'] = df.apply(lambda x: get_flow_majority(x), axis=1)
+    df['FLOW_majority'] = np.where(
+        (df['FLOW_JMu'] + df['FLOW_LHu'] + df['FLOW_SFr']) >= 2, 1, 0)
 
     print('processing majority...')
 
-    df['majority'] = df.apply(lambda x: get_majority(x), axis=1)
+    df['majority'] = np.where(((df['FLOW_JMu'] + df['FLOW_LHu'] + df['FLOW_SFr']) == 1)
+                              | ((df['FLOW_JMu'] + df['FLOW_LHu'] + df['FLOW_SFr']) == 2), 2, 3)
+
+    # clean FLOW_majority and majority when not all annotators have annotated
+    df.loc[df[['FLOW_JMu', 'FLOW_LHu', 'FLOW_SFr']].isna().any(axis=1),
+           ['FLOW_majority', 'majority']] = None
 
     return df
 

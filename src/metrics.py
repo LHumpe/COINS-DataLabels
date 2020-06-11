@@ -31,9 +31,14 @@ def calculate_representation():
     # print(annotations['GENDER'].value_counts(normalize=True) * 100)
 
     print('\nRepresentation of combinations:\n')
-    for index, row in annotations.groupby(['FLOW_majority', 'GENDER', 'ETHNICITY'])['frame'].count().reset_index().iterrows():
-        print(row['FLOW_majority'], row['GENDER'], row['ETHNICITY'], '-',
+    for index, row in annotations.groupby(['GENDER', 'ETHNICITY'])['frame'].count().reset_index().iterrows():
+        print(row['GENDER'], row['ETHNICITY'], '-',
               "{0:.2%}".format(row['frame'] / len(annotations)))
+
+    print('\nAbsolute frames of combinations including flow (only annotated):\n')
+    for index, row in annotations.groupby(['FLOW_majority', 'GENDER', 'ETHNICITY'])['frame'].count().reset_index().iterrows():
+        print('flow' if row['FLOW_majority'] > 0 else 'noflow',
+              row['GENDER'], row['ETHNICITY'], '-', row['frame'])
 
 
 if __name__ == "__main__":
