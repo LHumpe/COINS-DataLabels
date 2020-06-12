@@ -122,17 +122,6 @@ def get_annotations():
 
     all_annotations = pd.concat(annotations, axis=0, ignore_index=True)
 
-    # remove frames that are occluded or outside
-    n_all = len(all_annotations)
-    all_annotations['occluded'] = pd.to_numeric(
-        all_annotations['occluded'], downcast='integer')
-    all_annotations['outside'] = pd.to_numeric(
-        all_annotations['outside'], downcast='integer')
-    all_annotations[(all_annotations['occluded'] == 0) &
-                    (all_annotations['outside'] == 0)]
-    print('\nremoved', n_all-len(all_annotations),
-          'frames that were outside or occluded\n')
-
     all_annotations['video'] = pd.to_numeric(
         all_annotations['video'], downcast='integer')
     all_annotations['frame'] = pd.to_numeric(
@@ -168,6 +157,18 @@ def process_frames():
     bboxes = get_bboxes()
     annotations = get_annotations()
     frames = bboxes.merge(annotations, how='left', on=['video', 'frame'])
+
+    # remove frames that are occluded or outside
+    n_all = len(frames)
+    frames['occluded'] = pd.to_numeric(
+        frames['occluded'], downcast='integer')
+    frames['outside'] = pd.to_numeric(
+        frames['outside'], downcast='integer')
+    frames = frames[(frames['occluded'] == 0) &
+                    (frames['outside'] == 0)]
+    print('\nremoved', n_all-len(frames),
+          'frames that were outside or occluded\n')
+
     frames = calc_irr(frames)
     if not os.path.isdir('data'):
         os.mkdir('data')
