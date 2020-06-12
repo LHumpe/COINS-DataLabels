@@ -26,6 +26,8 @@ def parse_track(track, flow=False):
             attributes['xbr'] = frame['@xbr']
             attributes['ybr'] = frame['@ybr']
             attributes['occluded'] = frame['@occluded']
+            attributes['outside'] = frame['@outside']
+
             # flow is joined in a later parsing step for each annotator
             del attributes['FLOW']
         else:
@@ -119,6 +121,18 @@ def get_annotations():
             annotations.append(annotation)
 
     all_annotations = pd.concat(annotations, axis=0, ignore_index=True)
+
+    # remove frames that are occluded or outside
+    n_all = len(all_annotations)
+    all_annotations['occluded'] = pd.to_numeric(
+        all_annotations['occluded'], downcast='integer')
+    all_annotations['outside'] = pd.to_numeric(
+        all_annotations['outside'], downcast='integer')
+    all_annotations[(all_annotations['occluded'] == 0) &
+                    (all_annotations['outside'] == 0)]
+    print('\nremoved', n_all-len(all_annotations),
+          'frames that were outside or occluded\n')
+
     all_annotations['video'] = pd.to_numeric(
         all_annotations['video'], downcast='integer')
     all_annotations['frame'] = pd.to_numeric(
